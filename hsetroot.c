@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 
 typedef enum { Full, Fill, Center, Tile, Xtend, Cover } ImageMode;
@@ -44,6 +45,7 @@ usage(char *commandline)
 // Globals:
 Display *display;
 int screen;
+int offset = 50;
 
 // Adapted from fluxbox' bsetroot
 int
@@ -145,6 +147,8 @@ load_image(ImageMode mode, const char *arg, int alpha, Imlib_Image rootimg, Xine
 
   for (int i = 0; i < noutputs; i++) {
     XineramaScreenInfo o = outputs[i];
+    o.width += offset;
+    o.height += offset;
     printf("output %d: size(%d, %d) pos(%d, %d)\n", i, o.width, o.height, o.x_org, o.y_org);
 
     if (mode == Fill) {
@@ -276,8 +280,10 @@ main(int argc, char **argv)
     imlib_context_set_display(display);
     vis = DefaultVisual(display, screen);
     cm = DefaultColormap(display, screen);
-    width = DisplayWidth(display, screen);
-    height = DisplayHeight(display, screen);
+    width = DisplayWidth(display, screen) + offset;
+    height = DisplayHeight(display, screen) + offset;
+    int real_width = DisplayWidth(display, screen);
+    int real_height = DisplayHeight(display, screen);
     depth = DefaultDepth(display, screen);
 
     if (opt_root) {
@@ -423,6 +429,31 @@ main(int argc, char **argv)
     XSetCloseDownMode(display, RetainTemporary);
 
     XSetWindowBackgroundPixmap(display, RootWindow(display, screen), pixmap);
+
+    Pixmap new_pixmap;
+    new_pixmap = XCreatePixmap(display, RootWindow(display, screen), width, height, depth);
+    XCopyArea(display, pixmap, new_pixmap, DefaultGC(display,screen),0,0,width,height,0,0);
+    
+    int frame_count = 300; 
+    int xcoords[] = {10,9,9,9,9,8,8,8,8,7,7,7,7,7,7,6,6,6,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,6,6,6,6,6,6,6,6,6,7,7,7,7,7,7,7,8,8,8,8,8,9,9,9,9,9,10,10,10,10,11,11,11,11,12,12,12,13,13,13,13,14,14,14,15,15,15,16,16,16,17,17,17,18,18,19,19,19,20,20,20,21,21,22,22,22,23,23,24,24,24,25,25,26,26,26,27,27,28,28,28,29,29,30,30,31,31,31,32,32,33,33,33,34,34,35,35,35,36,36,36,37,37,38,38,38,39,39,39,40,40,40,41,41,41,41,42,42,42,43,43,43,43,43,44,44,44,44,45,45,45,45,45,45,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,46,45,45,45,45,45,45,44,44,44,44,43,43,43,43,42,42,42,41,41,41,40,40,40,39,39,39,38,38,38,37,37,36,36,36,35,35,34,34,33,33,33,32,32,31,31,30,30,29,29,28,28,28,27,27,26,26,25,25,24,24,23,23,23,22,22,21,21,20,20,19,19,19,18,18,17,17,16,16,16,15,15,15,14,14,13,13,13,12,12,12,11,11,11,10,10,10,10};
+
+    int ycoords[] = {10,10,10,11,11,11,11,12,12,12,13,13,13,14,14,14,15,15,15,16,16,16,17,17,17,18,18,18,19,19,20,20,20,21,21,22,22,22,23,23,24,24,24,25,25,25,26,26,27,27,27,28,28,29,29,29,30,30,30,31,31,31,32,32,32,33,33,33,34,34,34,35,35,35,36,36,36,36,37,37,37,37,38,38,38,38,38,39,39,39,39,39,39,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,40,39,39,39,39,39,39,39,38,38,38,38,38,37,37,37,37,36,36,36,36,35,35,35,35,34,34,34,33,33,33,32,32,32,32,31,31,31,30,30,30,29,29,28,28,28,27,27,27,26,26,26,25,25,25,24,24,24,23,23,22,22,22,21,21,21,20,20,20,19,19,19,18,18,18,17,17,17,16,16,16,15,15,15,15,14,14,14,13,13,13,13,12,12,12,12,11,11,11,11,10,10,10,10,10,9,9,9,9,9,8,8,8,8,8,8,7,7,7,7,7,7,7,6,6,6,6,6,6,6,6,6,6,6,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,6,6,6,6,6,6,6,6,6,6,6,7,7,7,7,7,7,7,8,8,8,8,8,9,9,9,9,10,10};
+
+    XSelectInput(display,RootWindow(display,screen),ExposureMask);
+    XEvent event;
+
+    while(1)
+    {
+        int i;
+        for(i=0;i<frame_count;i++)
+        {
+            XCopyArea(display, new_pixmap, pixmap, DefaultGC(display,screen),xcoords[i], ycoords[i],real_width,real_height, 0, 0);
+            XSync(display,0);
+            usleep(19000);
+            XNextEvent(display, &event);
+        }
+    }
+
     XClearWindow(display, RootWindow(display, screen));
 
     XFlush(display);
